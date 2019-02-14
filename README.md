@@ -12,11 +12,11 @@
 
 (随机下载的小说，侵删)
 
-![](./preview1.jpg)
+![](./preview1.jpg){:height="100"}
 
 
 
-![](./preview2.jpg)
+![](./preview2.jpg){:height="100"}
 
 # 安装
 
