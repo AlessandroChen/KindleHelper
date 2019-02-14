@@ -12,11 +12,11 @@
 
 (随机下载的小说，侵删)
 
-![](./preview1.jpg){:height="100"}
 
 
+<img src="https://github.com/AlessandroChen/KindleHelper/blob/master/preview1.jpg" height = "100" div align=center/>
 
-![](./preview2.jpg){:height="100"}
+<img src="https://github.com/AlessandroChen/KindleHelper/blob/master/preview2.jpg" height = "100" div align=center/>
 
 # 安装
 
