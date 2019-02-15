@@ -2,10 +2,11 @@ from urllib.request import urlopen
 from urllib.request import urlretrieve
 from bs4 import BeautifulSoup
 from Autopush import autopush
+from Config import config
 import os, stat
 
 def addPermission(Filename):
-    os.chmod(Filename, os.stat(Filename), st_mode | stat.S_IXUSR);
+    os.chmod(Filename, os.stat(Filename).st_mode | stat.S_IXUSR);
 
 def transform(content):
     name = '';
@@ -83,18 +84,21 @@ class ParseContent:
     def done(self, Filetype):
         self.shell += " --epub-cover-image=cover.jpg"
         if Filetype == '2':
-            self.shell += " && kindlegen %s.mobi" % self.book_name;
+            self.shell += " && kindlegen %s.epub" % self.book_name;
         fi = open("translate.sh", "w");
         fi.write(self.shell);
+        fi.close();
         fe = open("clear.sh", "w");
         fe.write("rm *.md *.epub title.txt");
+        fe.close();
         addPermission("translate.sh");
         addPermission("clear.sh");
         print ("完成下载！");
         print ("正在为你转换 mobi 格式");
         os.system("./translate.sh");
         print ("正在推送");
-        autopush.main_push(self.book_name);
+        en = autopush.emailSender();
+        en.sendEmailWithAttr(config.receiver,config.username,config.password,"%s.mobi" % self.book_name)
         print ("可用 ./translate.sh 手动生成书籍")
         print ("可用 ./clear.sh 删除所有 md 文件");
 
