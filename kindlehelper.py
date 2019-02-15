@@ -91,7 +91,11 @@ class ParseContent:
         addPermission("translate.sh");
         addPermission("clear.sh");
         print ("完成下载！");
-        print ("请用 ./translate.sh 生成书籍")
+        print ("正在为你转换 mobi 格式");
+        os.system("./translate.sh");
+        print ("正在推送");
+        autopush.main_push(self.book_name);
+        print ("可用 ./translate.sh 手动生成书籍")
         print ("可用 ./clear.sh 删除所有 md 文件");
 
     def printInformation(self):
