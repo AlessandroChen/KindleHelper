@@ -8,6 +8,14 @@
 
 
 
+# 特性
+
+* 自动转换（可选 `mobi` `epub` 格式）
+* 可选章节（选择章节下载）
+* 自动推送（在 `Config/config.py` 中配置）
+
+
+
 # 预览
 
 (随机下载的小说，侵删)
@@ -36,11 +44,14 @@ $ git clone https://github.com/AlessandroChen/KindleHelper.git
 
 
 
-# Features
+# Plan
 
 * 加速下载
 * 美化界面
 * 详细Guide
 * 多源下载
 * 添加GUI界面
+* 优化爬取
+* 一键搜索
+* 写Wiki
 

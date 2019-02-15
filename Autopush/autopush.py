@@ -27,7 +27,7 @@ class emailSender(object):
             smtpSSLClient = smtplib.SMTP_SSL(self.smtp_host, self.smtp_port)   # 实例化一个SMTP_SSL对象
             loginRes = smtpSSLClient.login(kindleAuthEmail, kindleAuthPwd)      # 登录smtp服务器
             loginRes = (235, b'Authentication successful')
-            print (loginRes);
+            # print (loginRes);
             if loginRes and loginRes[0] == 235:
                 print ("登录成功");
                 smtpSSLClient.sendmail(kindleAuthEmail, kindleEmail, message.as_string())
