@@ -121,7 +121,7 @@ class ParseContent:
         print ("一共解析到", len(self.websites), "章");
 
 def main():
-    print ("请输入书籍编号 (www.booktxt.com)");
+    print ("请输入书籍编号 (www.biquyun.com)");
 
     bookid = input (">> ");
 
