@@ -3,6 +3,7 @@ from urllib.request import urlretrieve
 from bs4 import BeautifulSoup
 from Autopush import autopush
 from Config import config
+import requests
 import os, stat
 import _thread
 import threading
@@ -37,8 +38,10 @@ class ParseContent:
         self.id = bookid;
         site = ParseSite + bookid 
         #  + "/index.html"
-        self.html = urlopen(site);
-        self.bsObj = BeautifulSoup(self.html, features="lxml");
+        self.html = requests.get(site);
+        self.html.encoding = 'gbk';
+        # self.html = urlopen(site);
+        self.bsObj = BeautifulSoup(self.html.text, features="lxml");
         self.websites = [];
         self.chapter_name = [];
         self.shell = "pandoc -o "
@@ -72,8 +75,10 @@ class ParseContent:
     def parsePage(self, num):
         site = ParseSite + self.websites[num - 1];
         # print (site);
-        html = urlopen(site);
-        bsObj = BeautifulSoup(html, features="lxml");
+        # html = urlopen(site);
+        html = requests.get(site);
+        html.encoding = 'gbk';
+        bsObj = BeautifulSoup(html.text, features="lxml");
         fi = open(str(num) + '.md', 'w');
         # self.shell += " " + str(num) + ".md";
         fi.write("## " + self.chapter_name[num - 1] + '\n\n');
