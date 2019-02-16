@@ -55,3 +55,7 @@ $ git clone https://github.com/AlessandroChen/KindleHelper.git
 * 一键搜索
 * 写Wiki
 
+# 待解决算法
+
+* 章节一一对应
+

@@ -4,10 +4,6 @@ from bs4 import BeautifulSoup
 from Autopush import autopush
 from Config import config
 import os, stat
-import _thread
-import threading
-
-ParseSite = 'http://www.biquyun.com/'
 
 def addPermission(Filename):
     os.chmod(Filename, os.stat(Filename).st_mode | stat.S_IXUSR);
@@ -35,10 +31,9 @@ def getName(name):
 class ParseContent:
     def __init__(self, bookid):
         self.id = bookid;
-        site = ParseSite + bookid 
-        #  + "/index.html"
+        site = "https://www.booktxt.com/" + bookid + "/index.html"
         self.html = urlopen(site);
-        self.bsObj = BeautifulSoup(self.html, features="lxml");
+        self.bsObj = BeautifulSoup(self.html, features="html5lib");
         self.websites = [];
         self.chapter_name = [];
         self.shell = "pandoc -o "
@@ -50,11 +45,11 @@ class ParseContent:
             self.author = getName(repr(name));
         for name in self.bsObj.findAll("meta", {"property":"og:novel:latest_chapter_name"}):
             self.last_chapter_name = getName(repr(name));
-        # for name in self.bsObj.findAll("meta", {"property":"og:image"}):
-            # self.image_url = getName(repr(name));
+        for name in self.bsObj.findAll("meta", {"property":"og:image"}):
+            self.image_url = getName(repr(name));
 
         # Download Cover Pic
-        # urlretrieve(self.image_url, 'cover.jpg');
+        urlretrieve(self.image_url, 'cover.jpg');
 
         fi = open("title.txt", 'w');
 
@@ -70,12 +65,11 @@ class ParseContent:
                 self.chapter_name.append(Name);
 
     def parsePage(self, num):
-        site = ParseSite + self.websites[num - 1];
-        # print (site);
+        site = "https://www.booktxt.com/" + self.id + self.websites[num - 1];
         html = urlopen(site);
-        bsObj = BeautifulSoup(html, features="lxml");
+        bsObj = BeautifulSoup(html, features="html5lib");
         fi = open(str(num) + '.md', 'w');
-        # self.shell += " " + str(num) + ".md";
+        self.shell += " " + str(num) + ".md";
         fi.write("## " + self.chapter_name[num - 1] + '\n\n');
         
         for name in bsObj.findAll("div", {"id":"content"}):
@@ -87,10 +81,8 @@ class ParseContent:
         self.parsehtml();
         self.printInformation();
 
-    def done(self, Filetype, st, ed):
-        # self.shell += " --epub-cover-image=cover.jpg"
-        for i in range(int(st), int(ed) + 1):
-            self.shell += " " + str(i) + ".md";
+    def done(self, Filetype):
+        self.shell += " --epub-cover-image=cover.jpg"
         if Filetype == '2':
             self.shell += " && kindlegen %s.epub" % self.book_name;
         fi = open("translate.sh", "w");
@@ -125,6 +117,7 @@ def main():
 
     Filetype = input (">> ");
 
+
     content = ParseContent(bookid);
     content.work();
 
@@ -133,21 +126,11 @@ def main():
 
     ed = min(int(ed), len(content.websites));
 
-    threads = [];
-
     for i in range(int(st), int(ed) + 1):
-        # print ("正在下载第 %04d 章" % i);
-        # content.parsePage(i);
-        t = threading.Thread(target=content.parsePage, args=(i,));
-        threads.append(t);
+        print ("正在下载第 %04d 章" % i);
+        content.parsePage(i);
 
-    for t in threads:
-        t.start();
-
-    for t in threads:
-        t.join();
-
-    content.done(Filetype, st, ed);
+    content.done(Filetype);
 
 if __name__ == '__main__':
     main();
