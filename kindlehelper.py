@@ -1,158 +1,141 @@
-from urllib.request import urlopen
-from urllib.request import urlretrieve
-from bs4 import BeautifulSoup
+from bs4 import BeautifulSoup as soup
 from Autopush import autopush
 from Config import config
+from progressbar import *
+from Functions import parsetool
 import requests
-import os, stat
-import _thread
+import os, stat, glob
 import threading
 
 ParseSite = 'http://www.biquyun.com/'
 
-def addPermission(Filename):
-    os.chmod(Filename, os.stat(Filename).st_mode | stat.S_IXUSR);
-
-def transform(content):
-    name = '';
-    for i in range(0, len(content)):
-        if (content[i] == ' ' and content[i + 1] == ' '):
-            name += '\n';
-        else:
-            name += content[i];
-    return name;
-
-def getName(name):
-    j = 0;
-    for i in range(0, len(name)):
-        if name[i:i+7] == 'content':
-            j = i + 9;
-            for j in range(i + 9, len(name)):
-                if (name[j] == "'" or name[j] == '"'):
-                    break;
-            return name[i+9:j];
-
-
 class ParseContent:
-    def __init__(self, bookid):
-        self.id = bookid;
-        site = ParseSite + bookid 
-        #  + "/index.html"
-        self.html = requests.get(site);
-        self.html.encoding = 'gbk';
-        # self.html = urlopen(site);
-        self.bsObj = BeautifulSoup(self.html.text, features="lxml");
-        self.websites = [];
-        self.chapter_name = [];
+    def __init__(self, book_id):
+        self.id = book_id
+        self.chapter_link = []
+        self.chapter_name = []
         self.shell = "pandoc -o "
 
+        self.html = requests.get(ParseSite + book_id)
+        self.html.encoding = 'gbk'
+        self.bsObj = soup(self.html.text, features = "lxml")
+
     def parsehtml(self):
-        for name in self.bsObj.findAll("meta", {"property":"og:novel:book_name"}):
-            self.book_name = getName(repr(name));
-        for name in self.bsObj.findAll("meta", {"property":"og:novel:author"}):
-            self.author = getName(repr(name));
-        for name in self.bsObj.findAll("meta", {"property":"og:novel:latest_chapter_name"}):
-            self.last_chapter_name = getName(repr(name));
-        # for name in self.bsObj.findAll("meta", {"property":"og:image"}):
-            # self.image_url = getName(repr(name));
+        for content in self.bsObj.findAll("meta", {"property":"og:novel:book_name"}):
+            self.book_name = parsetool.getContent(repr(content))
+            print (self.book_name);
+        for content in self.bsObj.findAll("meta", {"property":"og:novel:author"}):
+            self.author = parsetool.getContent(repr(content))
+        for content in self.bsObj.findAll("meta", {"property":"og:novel:latest_chapter_name"}):
+            self.latest_chapter_name = parsetool.getContent(repr(content))
 
-        # Download Cover Pic
-        # urlretrieve(self.image_url, 'cover.jpg');
-
-        fi = open("title.txt", 'w');
-
+        # 生成名称、作者页面
+        Book_info_file = open("title.txt", 'w')
         sign = '%'
+        Book_info_file.write("%s %s\n%s %s\n" % (sign, self.book_name, sign, self.author))
+        Book_info_file.close();
 
-        fi.write("%s %s\n%s %s\n" % (sign, self.book_name, sign, self.author));
-        self.shell += self.book_name + ".epub" + " title.txt";
-
-        for name in self.bsObj.find("div", {"id":"list"}).findAll("a"):
-            Name = str(name.get_text());
+        for chapter_links in self.bsObj.find("div", {"id":"list"}).findAll("a"):
+            Name = str(chapter_links.get_text())
             if ('第' in Name and '章' in Name):
-                self.websites.append(name['href']);
-                self.chapter_name.append(Name);
+                self.chapter_link.append(chapter_links['href'])
+                self.chapter_name.append(Name)
+
+        if len(self.chapter_link) == 0:
+            # 不是 "第 章" 形式
+            for chapter_links in self.bsObj.find("div", {"id":"list"}).findAll("a"):
+                self.chapter_link.append(chapter_links['href'])
+                self.chapter_name.append(Name)
 
     def parsePage(self, num):
-        site = ParseSite + self.websites[num - 1];
-        # print (site);
-        # html = urlopen(site);
-        html = requests.get(site);
-        html.encoding = 'gbk';
-        bsObj = BeautifulSoup(html.text, features="lxml");
-        fi = open(str(num) + '.md', 'w');
-        # self.shell += " " + str(num) + ".md";
-        fi.write("## " + self.chapter_name[num - 1] + '\n\n');
+        site = ParseSite + self.chapter_link[num - 1]
+        html = requests.get(site)
+        html.encoding = 'gbk'
+        bsObj = soup(html.text, features="lxml")
+        fi = open(str(num) + '.md', 'w')
+        fi.write("## " + self.chapter_name[num - 1] + '\n\n')
         
         for name in bsObj.findAll("div", {"id":"content"}):
-            Name = str(name).replace("<br>",'\n').replace("<br/>",'\n');
-            fi.write(Name[19:-7]);
-        fi.write('\n');
+            Name = str(name).replace("<br>",'\n').replace("<br/>",'\n')
+            fi.write(Name[19:-7])
+        fi.write('\n')
 
     def work(self):
-        self.parsehtml();
-        self.printInformation();
+        self.parsehtml()
+        self.printInformation()
 
     def done(self, Filetype, st, ed):
-        # self.shell += " --epub-cover-image=cover.jpg"
+        # 生成脚本
+        self.shell += self.book_name + ".epub" + " title.txt"
         for i in range(int(st), int(ed) + 1):
-            self.shell += " " + str(i) + ".md";
+            self.shell += " " + str(i) + ".md"
         if Filetype == '2':
-            self.shell += " && kindlegen %s.epub" % self.book_name;
-        fi = open("translate.sh", "w");
-        fi.write(self.shell);
-        fi.close();
-        fe = open("clear.sh", "w");
-        fe.write("rm *.md *.epub title.txt");
-        fe.close();
-        addPermission("translate.sh");
-        addPermission("clear.sh");
-        print ("完成下载！");
-        print ("正在为你转换 mobi 格式");
-        os.system("./translate.sh");
-        print ("正在推送");
-        en = autopush.emailSender();
+            self.shell += " && kindlegen %s.epub" % self.book_name
+        fi = open("translate.sh", "w")
+        fi.write(self.shell)
+        fi.close()
+        fe = open("clear.sh", "w")
+        fe.write("rm *.md *.epub title.txt")
+        fe.close()
+        parsetool.addPermission("translate.sh")
+        parsetool.addPermission("clear.sh")
+        print ("完成下载！")
+        print ("正在为你转换 mobi 格式")
+        os.system("./translate.sh")
+        print ("正在推送")
+        en = autopush.emailSender()
         en.sendEmailWithAttr(config.receiver,config.username,config.password,"%s.mobi" % self.book_name)
         print ("可用 ./translate.sh 手动生成书籍")
-        print ("可用 ./clear.sh 删除所有 md 文件");
+        print ("可用 ./clear.sh 删除所有 md 文件")
 
     def printInformation(self):
-        print ("书籍名称：", self.book_name);
-        print ("最新章节：", self.last_chapter_name);
-        print ("一共解析到", len(self.websites), "章");
+        print ("书籍名称：", self.book_name)
+        print ("最新章节：", self.latest_chapter_name)
+        print ("一共解析到", len(self.chapter_link), "章")
 
 def main():
-    print ("请输入书籍编号 (www.biquyun.com)");
+    print ("请输入书籍编号 (www.biquyun.com)")
 
-    bookid = input (">> ");
+    book_id = input (">> ")
 
-    print ("输入 1 以生成 epub 格式");
-    print ("输入 2 以生成 mobi 格式");
+    print ("输入 1 以生成 epub 格式")
+    print ("输入 2 以生成 mobi 格式")
 
-    Filetype = input (">> ");
+    Filetype = input (">> ")
 
-    content = ParseContent(bookid);
-    content.work();
+    content = ParseContent(book_id)
+    content.work()
 
-    st = input("请输入下载起始位置: ");
-    ed = input("请输入下载结束位置: ");
+    st = input("请输入下载起始位置: ")
+    ed = input("请输入下载结束位置: ")
 
-    ed = min(int(ed), len(content.websites));
+    ed = min(int(ed), len(content.chapter_link))
 
-    threads = [];
+    threads = []
 
     for i in range(int(st), int(ed) + 1):
-        # print ("正在下载第 %04d 章" % i);
-        # content.parsePage(i);
-        t = threading.Thread(target=content.parsePage, args=(i,));
-        threads.append(t);
+        t = threading.Thread(target = content.parsePage, args = (i,))
+        threads.append(t)
+
+
+    total = int(ed)-int(st)
+    psb = ProgressBar().start()
 
     for t in threads:
-        t.start();
+        psb.update(int(len(glob.glob(pathname="*.md")) / total * 100));
+        t.start()
+        while 1:
+            psb.update(int(len(glob.glob(pathname="*.md")) / total * 100));
+            if (len(threading.enumerate()) < 600):
+                break;
 
     for t in threads:
-        t.join();
+        psb.update(int(len(glob.glob(pathname="*.md")) / total * 100));
+        t.join()
 
-    content.done(Filetype, st, ed);
+    psb.finish();
+
+    content.done(Filetype, st, ed)
 
 if __name__ == '__main__':
-    main();
+    main()
