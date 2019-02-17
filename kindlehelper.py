@@ -21,6 +21,7 @@ class ParseContent:
         self.bsObj = soup(self.html.text, features = "lxml")
 
     def parsehtml(self):
+        print ("正在解析目录");
         for content in self.bsObj.findAll("meta", {"property":"og:novel:book_name"}):
             self.book_name = parsetool.getContent(repr(content))
             print (self.book_name);
@@ -66,6 +67,7 @@ class ParseContent:
 
     def done(self, Filetype, st, ed):
         # 生成脚本
+        print ("正在生成脚本...");
         self.shell += self.book_name + ".epub" + " title.txt"
         for i in range(int(st), int(ed) + 1):
             self.shell += " " + str(i) + ".md"
@@ -79,7 +81,6 @@ class ParseContent:
         fe.close()
         parsetool.addPermission("translate.sh")
         parsetool.addPermission("clear.sh")
-        print ("完成下载！")
         print ("正在为你转换 mobi 格式")
         os.system("./translate.sh")
         print ("正在推送")
@@ -89,9 +90,11 @@ class ParseContent:
         print ("可用 ./clear.sh 删除所有 md 文件")
 
     def printInformation(self):
+        print ("="*40)
         print ("书籍名称：", self.book_name)
         print ("最新章节：", self.latest_chapter_name)
         print ("一共解析到", len(self.chapter_link), "章")
+        print ("="*40)
 
 def main():
     print ("请输入书籍编号 (www.biquyun.com)")
@@ -129,11 +132,14 @@ def main():
             if (len(threading.enumerate()) < 600):
                 break;
 
-    for t in threads:
+    while (len(threading.enumerate()) >= 2):
         psb.update(int(len(glob.glob(pathname="*.md")) / total * 100));
+
+    for t in threads:
         t.join()
 
     psb.finish();
+    print ("完成下载!");
 
     content.done(Filetype, st, ed)
 

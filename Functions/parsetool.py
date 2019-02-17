@@ -1,4 +1,4 @@
-import os
+import os, stat
 
 def addPermission(Filename):
     os.chmod(Filename, os.stat(Filename).st_mode | stat.S_IXUSR);
