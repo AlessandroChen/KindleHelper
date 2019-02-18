@@ -1,11 +1,16 @@
 from bs4 import BeautifulSoup as soup
+
+
 from Autopush import autopush
 from Config import config
-from progressbar import *
 from Functions import parsetool
+from Search import searcher
+
 import requests
 import os, stat, glob
 import threading
+
+from progressbar import *
 
 ParseSite = 'http://www.biquyun.com/'
 
@@ -15,16 +20,20 @@ class ParseContent:
         self.chapter_link = []
         self.chapter_name = []
         self.shell = "pandoc -o "
-
-        self.html = requests.get(ParseSite + book_id)
+        try:
+            if (int(book_id[0]) >= 0 and int(book_id[0]) <= 9):
+                self.html = requests.get(ParseSite + book_id)
+        except:
+            self.html = searcher.get_book_link(book_id);
         self.html.encoding = 'gbk'
         self.bsObj = soup(self.html.text, features = "lxml")
+        # print (self.bsObj);
 
     def parsehtml(self):
         print ("正在解析目录");
         for content in self.bsObj.findAll("meta", {"property":"og:novel:book_name"}):
             self.book_name = parsetool.getContent(repr(content))
-            print (self.book_name);
+            # print (self.book_name);
         for content in self.bsObj.findAll("meta", {"property":"og:novel:author"}):
             self.author = parsetool.getContent(repr(content))
         for content in self.bsObj.findAll("meta", {"property":"og:novel:latest_chapter_name"}):
