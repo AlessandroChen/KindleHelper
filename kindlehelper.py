@@ -1,6 +1,5 @@
 from bs4 import BeautifulSoup as soup
 
-
 from Autopush import autopush
 from Config import config
 from Functions import parsetool
@@ -56,7 +55,7 @@ class ParseContent:
         Book_info_file.write("%s %s\n%s %s\n" % (sign, self.book_name, sign, self.author))
         Book_info_file.close();
 
-        print (self.content_url);
+        # print (self.content_url);
         html = requests.get(self.content_url, headers = header)
         html.encoding = 'gbk'
         self.bsObj = soup(html.text, features = 'lxml')
@@ -71,6 +70,7 @@ class ParseContent:
         if len(self.chapter_link) == 0:
             # 不是 "第 章" 形式
             for chapter_links in self.bsObj.find("div", {"class":"clearfix dirconone"}).findAll("a"):
+                Name = str(chapter_links.get_text())
                 self.chapter_link.append(chapter_links['href'])
                 self.chapter_name.append(Name)
 
@@ -84,7 +84,9 @@ class ParseContent:
         
         for name in bsObj.findAll("div", {"id":"content"}):
             Name = str(name).replace("<br>",'\n').replace("<br/>",'\n')
-            fi.write(Name[19:-7])
+            Name = Name.replace('<div class="mainContenr" id="content"><script type="text/javascript">style5();</script>','')
+            Name = Name.replace('<script type="text/javascript">style6();</script></div>','')
+            fi.write(Name)
         fi.write('\n')
 
     def work(self):
