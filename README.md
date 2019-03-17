@@ -55,6 +55,8 @@ $ sudo apt-get install pandoc kindlegen
 $ git clone https://github.com/AlessandroChen/KindleHelper.git
 ```
 
+请在 Config 文件夹下更改用户信息
+
 
 
 # Plan
@@ -74,6 +76,7 @@ $ git clone https://github.com/AlessandroChen/KindleHelper.git
 - [ ] 一键搜索
 
 - [ ] 写Wiki
+
 - [ ] 一键安装
 
 # 待解决算法

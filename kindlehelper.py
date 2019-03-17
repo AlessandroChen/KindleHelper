@@ -106,7 +106,7 @@ class ParseContent:
         print ("="*40)
 
 def main():
-    print ("请输入书籍编号 (www.biquyun.com)")
+    print ("请输入书籍编号或者书籍名称(www.biquyun.com)")
 
     book_id = input (">> ")
 
