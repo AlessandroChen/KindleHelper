@@ -35,9 +35,9 @@ $ python3 kdpush <Filename>.mobi
 
 
 
-<img src="https://github.com/AlessandroChen/KindleHelper/blob/master/preview1.jpg" height = "250" div align=center/>
+<img src="https://github.com/AlessandroChen/KindleHelper/blob/master/Preview/preview1.jpg" height = "250" div align=center/>
 
-<img src="https://github.com/AlessandroChen/KindleHelper/blob/master/preview2.jpg" height = "250" div align=center/>
+<img src="https://github.com/AlessandroChen/KindleHelper/blob/master/Preview/preview2.jpg" height = "250" div align=center/>
 
 # 安装
 
