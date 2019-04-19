@@ -6,12 +6,35 @@ from bs4 import BeautifulSoup as soup
 from urllib.request import quote
 import requests
 
+bookname = ''
+
 # CLASS SECTION
 
 class Book:
-    def __init(self, book_url):
+    def __init__(self, book_url):
         self.chapter_name = []
         self.chapter_url = []
+        self.section_name_list = []
+        self.section_first_chaptername = []
+        self.origurl = book_url
+
+    def parseOriginSite(self):
+        '''
+        section_name_list = ['A', 'B', 'C']
+        section_fist_chaptername = ['A-name']
+        '''
+        html = requests.get(self.origurl)
+        html.encoding = 'utf8'
+        bsObj = soup(html.text, features = 'lxml')
+        
+        self.writer = bsObj.find("a", {"class":"writer"}).get_text()
+        print (self.writer)
+
+        for contents in bsObj.findAll("div", {"class":"volume"}):
+            pass
+
+
+
 
 # DECLARATION SECTION
 
@@ -41,14 +64,19 @@ def QidianSearch(book_name):
         print ("\033[1;35m [%02d] \033[0m %s" % (len(search_resname) - num - 1, sname))
     resnum = input(">> 请选择结果: ")
     book_url = 'https:' + search_resurl[int(resnum)] + '#Catalog';
+    global bookname
+    bookname = search_resname[int(resnum)]
     return book_url
 
 # MAIN PROGRAM
 
 def main():
-    book_name = input(">> 请输入书籍名称: ")
+    # book_name = input(">> 请输入书籍名称: ")
 
-    origin_site = QidianSearch(book_name)
+    # origin_site = QidianSearch(book_name)
+
+    newbook = Book('https://book.qidian.com/info/1012439051#Catalog')
+    newbook.parseOriginSite()
 
     return
 
