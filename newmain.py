@@ -7,21 +7,23 @@ from urllib.request import quote
 import requests
 
 bookname = ''
+index = 1
 
 # CLASS SECTION
 
 class Book:
     def __init__(self, book_url):
-        self.chapter_name = []
-        self.chapter_url = []
+        self.chapter_name_list = []
+        self.chapter_url_list = []
         self.section_name_list = []
-        self.section_first_chaptername = []
+        self.section_index_list = []
         self.origurl = book_url
+
+    def getChapterName(self, num):
+        return self.chapter_name_list[num - 1]
 
     def parseOriginSite(self):
         '''
-        section_name_list = ['A', 'B', 'C']
-        section_fist_chaptername = ['A-name']
         '''
         html = requests.get(self.origurl)
         html.encoding = 'utf8'
@@ -30,9 +32,21 @@ class Book:
         self.writer = bsObj.find("a", {"class":"writer"}).get_text()
         print (self.writer)
 
-        for contents in bsObj.findAll("div", {"class":"volume"}):
-            pass
+        global index
 
+        for content in bsObj.findAll("div", {"class":"volume"}):
+            self.section_index_list.append(index)
+            section_name = content.h3.contents[2]
+            self.section_name_list.append(section_name.strip())
+
+            for chapter in content.findAll("a", {"class":""}):
+                self.chapter_name_list.append(chapter.get_text().strip())
+                # print (chapter.get_text())
+                index += 1
+
+        index -= 1
+
+    def downloadBook(self, start, end):
 
 
 
@@ -71,12 +85,35 @@ def QidianSearch(book_name):
 # MAIN PROGRAM
 
 def main():
-    # book_name = input(">> 请输入书籍名称: ")
+    book_name = input(">> 请输入书籍名称: ")
 
-    # origin_site = QidianSearch(book_name)
+    origin_site = QidianSearch(book_name)
 
-    newbook = Book('https://book.qidian.com/info/1012439051#Catalog')
+    # newbook = Book('https://book.qidian.com/info/1012439051#Catalog')
+    newbook = Book(origin_site)
+
+    print ("正在解析 %s" % bookname)
     newbook.parseOriginSite()
+    print ('''
+           解析完成，共解析到 %d 章
+           可以通过 输入 l 100 来查看第100章对应章节
+           输入 d 100 200 下载第100章至200章
+           ''' % index)
+
+    while (1):
+        prompt = input(">> ")
+        prompt = prompt.strip().split()
+        if (prompt[0] == 'l'):
+            print (newbook.getChapterName(int(prompt[1])))
+        elif (prompt[0] == 'd'):
+            start = max(int(prompt[1]), 1)
+            end = min(int(prompt[2]), index)
+            newbook.download(start, end)
+        elif (prompt[0] == 'exit'):
+            print ("Exit Successfully")
+            return
+        else:
+            pass
 
     return
 
