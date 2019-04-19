@@ -5,9 +5,11 @@ from bs4 import BeautifulSoup as soup
 
 from urllib.request import quote
 import requests
+import threading
 
 bookname = ''
 index = 1
+finished = 0
 
 # CLASS SECTION
 
@@ -30,7 +32,6 @@ class Book:
         bsObj = soup(html.text, features = 'lxml')
         
         self.writer = bsObj.find("a", {"class":"writer"}).get_text()
-        print (self.writer)
 
         global index
 
@@ -46,8 +47,18 @@ class Book:
 
         index -= 1
 
-    def downloadBook(self, start, end):
+    def parseWebSite(self, num):
+        print ("parse %d" % num)
+        finished += 1
+        pass
 
+    def downloadBook(self, start, end):
+        threads = []
+        for i in range(start, end):
+            threads.append(threading.Thread(target = self.parseWebSite, args = (i,)))
+
+        for t in threads:
+            t.start()
 
 
 # DECLARATION SECTION
@@ -85,20 +96,17 @@ def QidianSearch(book_name):
 # MAIN PROGRAM
 
 def main():
-    book_name = input(">> 请输入书籍名称: ")
+    # book_name = input(">> 请输入书籍名称: ")
 
-    origin_site = QidianSearch(book_name)
+    # origin_site = QidianSearch(book_name)
 
-    # newbook = Book('https://book.qidian.com/info/1012439051#Catalog')
-    newbook = Book(origin_site)
+    # newbook = Book(origin_site)
+
+    newbook = Book('https://book.qidian.com/info/1012439051#Catalog')
 
     print ("正在解析 %s" % bookname)
     newbook.parseOriginSite()
-    print ('''
-           解析完成，共解析到 %d 章
-           可以通过 输入 l 100 来查看第100章对应章节
-           输入 d 100 200 下载第100章至200章
-           ''' % index)
+    print ("解析完成，共解析到 %d 章" % index)
 
     while (1):
         prompt = input(">> ")
@@ -108,7 +116,7 @@ def main():
         elif (prompt[0] == 'd'):
             start = max(int(prompt[1]), 1)
             end = min(int(prompt[2]), index)
-            newbook.download(start, end)
+            newbook.downloadBook(start, end)
         elif (prompt[0] == 'exit'):
             print ("Exit Successfully")
             return
