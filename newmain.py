@@ -69,6 +69,11 @@ header = {'User-Agent':'Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 
 
 # FUNCTIONS SECTION
 
+def Help():
+    print ("Usage:")
+    print ("p 2    显示第二条对应章节")
+    print ("d 1 2  下载第1至第2条对应章节")
+
 def BaiduSearch(content):
     content = quote(content.strip().encode('gbk'))
     html = requests.get(BaiduUrl + repr(content)[1:-1])
@@ -111,7 +116,7 @@ def main():
     while (1):
         prompt = input(">> ")
         prompt = prompt.strip().split()
-        if (prompt[0] == 'l'):
+        if (prompt[0] == 'p'):
             print (newbook.getChapterName(int(prompt[1])))
         elif (prompt[0] == 'd'):
             start = max(int(prompt[1]), 1)
@@ -121,7 +126,7 @@ def main():
             print ("Exit Successfully")
             return
         else:
-            pass
+            Help()
 
     return
 
