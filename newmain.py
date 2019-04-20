@@ -6,6 +6,7 @@ from bs4 import BeautifulSoup as soup
 from urllib.request import quote
 import requests
 import threading
+import urllib3
 
 bookname = ''
 index = 1
@@ -28,7 +29,7 @@ class Book:
         '''
         '''
         html = requests.get(self.origurl)
-        html.encoding = 'utf8'
+        html.encoding = 'utf-8'
         bsObj = soup(html.text, features = 'lxml')
         
         self.writer = bsObj.find("a", {"class":"writer"}).get_text()
@@ -48,22 +49,40 @@ class Book:
         index -= 1
 
     def parseWebSite(self, num):
+
         print ("parse %d" % num)
+        global finished
         finished += 1
-        pass
 
     def downloadBook(self, start, end):
+
+        search_html = BaiduSearch(bookname)
+        search_bsObj = soup(search_html.text, features = 'lxml')
+
+        # 忽略 SSL Warning
+        urllib3.disable_warnings()
+
+        for link in search_bsObj.findAll("h3", {"class":"t"}):
+            print (link.a['href'])
+            html = requests.get(link.a['href'], verify = False)
+            html_encoding = html.encoding
+            if html_encoding == 'ISO-8859-1':
+                html.encoding = 'utf-8'
+            bsObj = soup(html.text, features = 'lxml')
+ 
         threads = []
-        for i in range(start, end):
+        for i in range(start, end + 1):
             threads.append(threading.Thread(target = self.parseWebSite, args = (i,)))
 
         for t in threads:
             t.start()
 
+        print ("finished")
+
 
 # DECLARATION SECTION
 
-BaiduUrl = 'https://www.baidu.com/s?wd='
+BaiduUrl = 'http://www.baidu.com/s?wd='
 QidianUrl = 'https://www.qidian.com/search?kw='
 header = {'User-Agent':'Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/50.0.2661.102 Safari/537.36'}
 
@@ -77,6 +96,8 @@ def Help():
 def BaiduSearch(content):
     content = quote(content.strip().encode('gbk'))
     html = requests.get(BaiduUrl + repr(content)[1:-1])
+    print (BaiduUrl + repr(content)[1:-1])
+    html.encoding = 'utf-8'
     return html
 
 def QidianSearch(book_name):
@@ -108,6 +129,8 @@ def main():
     # newbook = Book(origin_site)
 
     newbook = Book('https://book.qidian.com/info/1012439051#Catalog')
+    global bookname
+    bookname = "哈利波特之血猎者"
 
     print ("正在解析 %s" % bookname)
     newbook.parseOriginSite()
@@ -122,6 +145,7 @@ def main():
             start = max(int(prompt[1]), 1)
             end = min(int(prompt[2]), index)
             newbook.downloadBook(start, end)
+            return
         elif (prompt[0] == 'exit'):
             print ("Exit Successfully")
             return
