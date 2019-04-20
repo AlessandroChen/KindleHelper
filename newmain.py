@@ -8,6 +8,10 @@ import requests
 import threading
 import urllib3
 
+from urllib.parse import urlparse
+from urllib.parse import ParseResult
+from urllib.parse import urlunparse
+
 bookname = ''
 index = 1
 finished = 0
@@ -21,6 +25,10 @@ class Book:
         self.section_name_list = []
         self.section_index_list = []
         self.origurl = book_url
+        self.waiting_list = []
+
+        self.orightml = requests.get(book_url)
+        self.origbsObj = soup(self.orightml, features = 'lxml')
 
     def getChapterName(self, num):
         return self.chapter_name_list[num - 1]
@@ -48,9 +56,13 @@ class Book:
 
         index -= 1
 
-    def parseWebSite(self, num):
+    def parseWebSite(self, siteurl, num):
+        print ("parseWebSite(%s, %d)" % (siteurl, num))
+        print ("Name: %s", self.chapter_name_list[num - 1])
+        html = requests.get(siteurl, verify = False)
+        if html.encoding == 'ISO-8859-1':
+            html.encoding = 'utf-8'
 
-        print ("parse %d" % num)
         global finished
         finished += 1
 
@@ -59,23 +71,37 @@ class Book:
         search_html = BaiduSearch(bookname)
         search_bsObj = soup(search_html.text, features = 'lxml')
 
+        self.waiting_list = [i for i in range(start, end + 1)]
+
         # 忽略 SSL Warning
         urllib3.disable_warnings()
 
+        # threads = []
+
         for link in search_bsObj.findAll("h3", {"class":"t"}):
-            print (link.a['href'])
+            '''
+            先获取百度搜索内容
+            然后爬取目录、进行所需筛选
+            如果还有未成功的，继续向后爬取
+            '''
             html = requests.get(link.a['href'], verify = False)
             html_encoding = html.encoding
             if html_encoding == 'ISO-8859-1':
                 html.encoding = 'utf-8'
-            bsObj = soup(html.text, features = 'lxml')
- 
-        threads = []
-        for i in range(start, end + 1):
-            threads.append(threading.Thread(target = self.parseWebSite, args = (i,)))
+            bsObj = soup(html.text, features = 'lxml') # 获取目录页
 
-        for t in threads:
-            t.start()
+            parse_html = urlparse(html.url)
+
+            for target in self.waiting_list:
+                print ("target = %d" % target)
+                Chapter_inter_url = bsObj.find("a", string = self.chapter_name_list[target - 1])
+                if Chapter_inter_url == None:
+                    continue
+                html_res = ParseResult(parse_html.scheme, parse_html.netloc, Chapter_inter_url['href'], "", "", "")
+                site = urlunparse(html_res)
+                # print (site)
+                threading.Thread(target = self.parseWebSite, \
+                                                args = (site, target,)).start()
 
         print ("finished")
 
@@ -101,9 +127,9 @@ def BaiduSearch(content):
     return html
 
 def QidianSearch(book_name):
-    book_name = quote(book_name.strip().encode('utf8'))
+    book_name = quote(book_name.strip().encode('utf-8'))
     html = requests.get(QidianUrl + repr(book_name)[1:-1])
-    html.encoding = 'utf8'
+    html.encoding = 'utf-8'
     bsObj = soup(html.text, features = 'lxml')
     search_resname = []
     search_resurl = []
