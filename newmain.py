@@ -4,13 +4,14 @@
 from bs4 import BeautifulSoup as soup
 
 from urllib.request import quote
-import requests, urllib3, os
+import requests, urllib3, os, re
 import threading
 
 from urllib.parse import urljoin
 
 from goose3 import Goose
 from goose3.text import StopWordsChinese
+
 
 bookname = ''
 index = 1
@@ -26,6 +27,7 @@ class Book:
         self.section_index_list = []
         self.origurl = book_url
         self.waiting_list = []
+        self.trash_list = []
 
         self.orightml = requests.get(book_url)
         self.origbsObj = soup(self.orightml.text, features = 'lxml')
@@ -60,20 +62,34 @@ class Book:
         # html = requests.get(siteurl, verify = False)
         # if html.encoding == 'ISO-8859-1':
             # html.encoding = 'utf-8'
+        content = ''
         g = Goose({'stopwords_class': StopWordsChinese})
         print ("Goose ", siteurl)
         try:
             article = g.extract(url = siteurl)
-            print ("aritcle", article.title)
-            print (article.cleaned_text)
+            content = article.cleaned_text
+            if (content == ''):
+                return 
+            with open("%d.md" % num, 'w') as f:
+                f.write(content)
+            print (siteurl, num)
+            # print ("aritcle", article.title)
         except:
-
-            global finished
-            finished += 1
+            return
+        
+        global finished
+        finished += 1
         # self.waiting_list.remove(num)
+        self.trash_list.append(num)
 
 
     def downloadBook(self, start, end):
+
+        try:
+            os.mkdir(bookname)
+        except:
+            print ("Dir exist!")
+        os.chdir(bookname)
 
         search_html = BaiduSearch(bookname)
         search_bsObj = soup(search_html.text, features = 'lxml')
@@ -91,27 +107,34 @@ class Book:
             然后爬取目录、进行所需筛选
             如果还有未成功的，继续向后爬取
             '''
-            # if len(self.waiting_list) == 0:
-                # break
-            html = requests.get(link.a['href'], verify = False)
+            if len(self.waiting_list) == 0:
+                break
+            try:
+                html = requests.get(link.a['href'], verify = False)
+            except:
+                continue
             html_encoding = html.encoding
             if html_encoding == 'ISO-8859-1':
                 html.encoding = 'utf-8'
             bsObj = soup(html.text, features = 'lxml') # 获取目录页
 
-            # parse_html = urlparse(html.url)
-
             for target in self.waiting_list:
-                print ('\n'*10)
-                print ("target = %d" % target)
                 Chapter_inter_url = bsObj.find("a", string = self.chapter_name_list[target - 1])
                 if Chapter_inter_url == None:
+                    print (self.chapter_name_list[target - 1], "not found")
+                    print (html.url)
                     continue
+                print ('\n'*10)
+                print ("target = %d" % target)
                 site = urljoin(html.url, Chapter_inter_url['href'])
                 # threading.Thread(target = self.parseWebSite, \
                 #                 args = (site, target ,)).start()
                 self.parseWebSite(site, target)
 
+            for trash_num in self.trash_list:
+                self.waiting_list.remove(trash_num)
+
+        print (self.waiting_list)
         print ("finished")
 
 
@@ -157,15 +180,15 @@ def QidianSearch(book_name):
 # MAIN PROGRAM
 
 def main():
-    # book_name = input(">> 请输入书籍名称: ")
+    book_name = input(">> 请输入书籍名称: ")
 
-    # origin_site = QidianSearch(book_name)
+    origin_site = QidianSearch(book_name)
 
-    # newbook = Book(origin_site)
+    newbook = Book(origin_site)
 
-    newbook = Book('https://book.qidian.com/info/1012439051#Catalog')
-    global bookname
-    bookname = "哈利波特之血猎者"
+    # newbook = Book('https://book.qidian.com/info/1012439051#Catalog')
+    # global bookname
+    # bookname = "哈利波特之血猎者"
 
     print ("正在解析 %s" % bookname)
     newbook.parseOriginSite()
