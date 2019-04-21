@@ -12,6 +12,12 @@ from urllib.parse import urljoin
 from goose3 import Goose
 from goose3.text import StopWordsChinese
 
+from selenium import webdriver
+import time
+
+firefox_option = webdriver.FirefoxOptions()
+firefox_option.set_headless()
+
 
 bookname = ''
 index = 1
@@ -36,9 +42,13 @@ class Book:
         return self.chapter_name_list[num - 1]
 
     def parseOriginSite(self):
-        html = requests.get(self.origurl)
-        html.encoding = 'utf-8'
-        bsObj = soup(html.text, features = 'lxml')
+        eng = webdriver.Firefox(options = firefox_option)
+        # eng.implicitly_wait(5)
+        eng.get(self.origurl)
+        time.sleep(3)
+        bsObj = soup(eng.page_source, features = 'lxml')
+
+        print ("解析完成")
         
         self.writer = bsObj.find("a", {"class":"writer"}).get_text()
 
@@ -59,9 +69,6 @@ class Book:
     def parseWebSite(self, siteurl, num):
         print ("parseWebSite(%s, %d)" % (siteurl, num))
         print ("Name: ", self.chapter_name_list[num - 1])
-        # html = requests.get(siteurl, verify = False)
-        # if html.encoding == 'ISO-8859-1':
-            # html.encoding = 'utf-8'
         content = ''
         g = Goose({'stopwords_class': StopWordsChinese})
         print ("Goose ", siteurl)
@@ -71,8 +78,9 @@ class Book:
             if (content == ''):
                 return 
             with open("%d.md" % num, 'w') as f:
+                f.write("## %s\n\n" % self.chapter_name_list[num])
                 f.write(content)
-            print (siteurl, num)
+            # print (siteurl, num)
             # print ("aritcle", article.title)
         except:
             return
@@ -126,7 +134,9 @@ class Book:
                     continue
                 print ('\n'*10)
                 print ("target = %d" % target)
+                print ("Before Join ", html.url, Chapter_inter_url['href'])
                 site = urljoin(html.url, Chapter_inter_url['href'])
+                print ("After :", site)
                 # threading.Thread(target = self.parseWebSite, \
                 #                 args = (site, target ,)).start()
                 self.parseWebSite(site, target)
@@ -158,6 +168,19 @@ def BaiduSearch(content):
     html.encoding = 'utf-8'
     return html
 
+def strB2Q(ustring):
+    """半角转全角"""
+    rstring = ""
+    for uchar in ustring:
+        inside_code=ord(uchar)
+        if inside_code == 32:                                 #半角空格直接转化
+            inside_code = 12288
+        elif inside_code >= 32 and inside_code <= 126:        #半角字符（除空格）根据关系转化
+            inside_code += 65248
+
+        rstring += unichr(inside_code)
+    return rstring
+
 def QidianSearch(book_name):
     book_name = quote(book_name.strip().encode('utf-8'))
     html = requests.get(QidianUrl + repr(book_name)[1:-1])
@@ -180,15 +203,15 @@ def QidianSearch(book_name):
 # MAIN PROGRAM
 
 def main():
-    book_name = input(">> 请输入书籍名称: ")
-
-    origin_site = QidianSearch(book_name)
-
-    newbook = Book(origin_site)
-
-    # newbook = Book('https://book.qidian.com/info/1012439051#Catalog')
-    # global bookname
-    # bookname = "哈利波特之血猎者"
+    isTest = 0
+    if isTest == 0:
+        book_name = input(">> 请输入书籍名称: ")
+        origin_site = QidianSearch(book_name)
+        newbook = Book(origin_site)
+    else:
+        newbook = Book('https://book.qidian.com/info/1012439051#Catalog')
+        global bookname
+        bookname = "哈利波特之血猎者"
 
     print ("正在解析 %s" % bookname)
     newbook.parseOriginSite()
