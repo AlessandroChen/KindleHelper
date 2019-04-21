@@ -4,13 +4,13 @@
 from bs4 import BeautifulSoup as soup
 
 from urllib.request import quote
-import requests
+import requests, urllib3, os
 import threading
-import urllib3
 
-from urllib.parse import urlparse
-from urllib.parse import ParseResult
-from urllib.parse import urlunparse
+from urllib.parse import urljoin
+
+from goose3 import Goose
+from goose3.text import StopWordsChinese
 
 bookname = ''
 index = 1
@@ -28,14 +28,12 @@ class Book:
         self.waiting_list = []
 
         self.orightml = requests.get(book_url)
-        self.origbsObj = soup(self.orightml, features = 'lxml')
+        self.origbsObj = soup(self.orightml.text, features = 'lxml')
 
     def getChapterName(self, num):
         return self.chapter_name_list[num - 1]
 
     def parseOriginSite(self):
-        '''
-        '''
         html = requests.get(self.origurl)
         html.encoding = 'utf-8'
         bsObj = soup(html.text, features = 'lxml')
@@ -58,13 +56,22 @@ class Book:
 
     def parseWebSite(self, siteurl, num):
         print ("parseWebSite(%s, %d)" % (siteurl, num))
-        print ("Name: %s", self.chapter_name_list[num - 1])
-        html = requests.get(siteurl, verify = False)
-        if html.encoding == 'ISO-8859-1':
-            html.encoding = 'utf-8'
+        print ("Name: ", self.chapter_name_list[num - 1])
+        # html = requests.get(siteurl, verify = False)
+        # if html.encoding == 'ISO-8859-1':
+            # html.encoding = 'utf-8'
+        g = Goose({'stopwords_class': StopWordsChinese})
+        print ("Goose ", siteurl)
+        try:
+            article = g.extract(url = siteurl)
+            print ("aritcle", article.title)
+            print (article.cleaned_text)
+        except:
 
-        global finished
-        finished += 1
+            global finished
+            finished += 1
+        # self.waiting_list.remove(num)
+
 
     def downloadBook(self, start, end):
 
@@ -84,24 +91,26 @@ class Book:
             然后爬取目录、进行所需筛选
             如果还有未成功的，继续向后爬取
             '''
+            # if len(self.waiting_list) == 0:
+                # break
             html = requests.get(link.a['href'], verify = False)
             html_encoding = html.encoding
             if html_encoding == 'ISO-8859-1':
                 html.encoding = 'utf-8'
             bsObj = soup(html.text, features = 'lxml') # 获取目录页
 
-            parse_html = urlparse(html.url)
+            # parse_html = urlparse(html.url)
 
             for target in self.waiting_list:
+                print ('\n'*10)
                 print ("target = %d" % target)
                 Chapter_inter_url = bsObj.find("a", string = self.chapter_name_list[target - 1])
                 if Chapter_inter_url == None:
                     continue
-                html_res = ParseResult(parse_html.scheme, parse_html.netloc, Chapter_inter_url['href'], "", "", "")
-                site = urlunparse(html_res)
-                # print (site)
-                threading.Thread(target = self.parseWebSite, \
-                                                args = (site, target,)).start()
+                site = urljoin(html.url, Chapter_inter_url['href'])
+                # threading.Thread(target = self.parseWebSite, \
+                #                 args = (site, target ,)).start()
+                self.parseWebSite(site, target)
 
         print ("finished")
 
