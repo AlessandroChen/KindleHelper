@@ -8,9 +8,7 @@ import requests, urllib3, os, re
 import threading
 
 from urllib.parse import urljoin
-
-from goose3 import Goose
-from goose3.text import StopWordsChinese
+from sources import *
 
 from selenium import webdriver
 import time
@@ -18,9 +16,8 @@ import time
 firefox_option = webdriver.FirefoxOptions()
 firefox_option.set_headless()
 
-
 bookname = ''
-index = 1
+orgin_index = 1
 finished = 0
 
 # CLASS SECTION
@@ -31,7 +28,8 @@ class Book:
         self.chapter_url_list = []
         self.section_name_list = []
         self.section_index_list = []
-        self.origurl = book_url
+        self.origin_url = book_url
+
         self.waiting_list = []
         self.trash_list = []
 
@@ -44,53 +42,35 @@ class Book:
     def parseOriginSite(self):
         eng = webdriver.Firefox(options = firefox_option)
         # eng.implicitly_wait(5)
-        eng.get(self.origurl)
+        eng.get(self.origin_url)
         time.sleep(3)
         bsObj = soup(eng.page_source, features = 'lxml')
 
         print ("解析完成")
         
-        self.writer = bsObj.find("a", {"class":"writer"}).get_text()
+        self.orgin_writer = bsObj.find("a", {"class":"writer"}).get_text()
 
-        global index
+        global orgin_index
 
         for content in bsObj.findAll("div", {"class":"volume"}):
-            self.section_index_list.append(index)
+            self.section_index_list.append(orgin_index)
             section_name = content.h3.contents[2]
             self.section_name_list.append(section_name.strip())
 
             for chapter in content.findAll("a", {"class":""}):
                 self.chapter_name_list.append(chapter.get_text().strip())
-                # print (chapter.get_text())
-                index += 1
+                orgin_index += 1
 
-        index -= 1
+        orgin_index -= 1
 
     def parseWebSite(self, siteurl, num):
-        print ("parseWebSite(%s, %d)" % (siteurl, num))
-        print ("Name: ", self.chapter_name_list[num - 1])
-        content = ''
-        g = Goose({'stopwords_class': StopWordsChinese})
-        print ("Goose ", siteurl)
-        try:
-            article = g.extract(url = siteurl)
-            content = article.cleaned_text
-            if (content == ''):
-                return 
-            with open("%d.md" % num, 'w') as f:
-                f.write("## %s\n\n" % self.chapter_name_list[num])
-                f.write(content)
-            # print (siteurl, num)
-            # print ("aritcle", article.title)
-        except:
-            return False
-        
+        ### NOTE: NEED USE MULTIPLE SOURCES ###
+        pass:
         global finished
         finished += 1
         # self.waiting_list.remove(num)
         self.trash_list.append(num)
         return True
-
 
     def downloadBook(self, start, end):
 
@@ -161,6 +141,7 @@ def Help():
     print ("Usage:")
     print ("p 2    显示第二条对应章节")
     print ("d 1 2  下载第1至第2条对应章节")
+    print ("exit   退出")
 
 def BaiduSearch(content):
     content = quote(content.strip().encode('gbk'))
@@ -178,7 +159,6 @@ def QidianSearch(book_name):
     search_resurl = []
     for search_res in bsObj.findAll("h4"):
         search_resname.append(search_res.get_text())
-        # print (search_res.contents[0]['href'])
         search_resurl.append(search_res.contents[0]['href'])
     for num, sname in enumerate(reversed(search_resname)):
         print ("\033[1;35m [%02d] \033[0m %s" % (len(search_resname) - num - 1, sname))
