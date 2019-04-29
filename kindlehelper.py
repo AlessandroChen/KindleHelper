@@ -1,11 +1,11 @@
 from bs4 import BeautifulSoup as soup
 
-from Autopush import autopush
-from Config import config
-from Functions import parsetool
+from autopush import autopush
+from utils import config
+from functions import parsetool
 
 import requests
-import os, stat, glob
+import os, stat
 import threading
 
 from progressbar import *
@@ -15,6 +15,7 @@ import requests
 
 # ParseSite = 'http://www.biquyun.com/'
 ParseSite = ''
+Finished = 0
 
 header = {'User-Agent':'Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/50.0.2661.102 Safari/537.36'}
 
@@ -75,6 +76,7 @@ class ParseContent:
                 self.chapter_name.append(Name)
 
     def parsePage(self, num):
+        global Finished
         site = ParseSite + self.chapter_link[num - 1]
         html = requests.get(site)
         html.encoding = 'gbk'
@@ -88,6 +90,7 @@ class ParseContent:
             Name = Name.replace('<script type="text/javascript">style6();</script></div>','')
             fi.write(Name)
         fi.write('\n')
+        Finished += 1
 
     def work(self):
         self.parsehtml()
@@ -152,15 +155,15 @@ def main():
     psb = ProgressBar().start()
 
     for t in threads:
-        psb.update(int(len(glob.glob(pathname="*.md")) / total * 100));
+        psb.update(int(Finished / total * 100));
         t.start()
         while 1:
-            psb.update(int(len(glob.glob(pathname="*.md")) / total * 100));
+            psb.update(int(Finished / total * 100));
             if (len(threading.enumerate()) < 600):
                 break;
 
     while (len(threading.enumerate()) >= 2):
-        psb.update(int(len(glob.glob(pathname="*.md")) / total * 100));
+        psb.update(int(Finished / total * 100));
 
     for t in threads:
         t.join()

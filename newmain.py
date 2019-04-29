@@ -83,12 +83,13 @@ class Book:
             # print (siteurl, num)
             # print ("aritcle", article.title)
         except:
-            return
+            return False
         
         global finished
         finished += 1
         # self.waiting_list.remove(num)
         self.trash_list.append(num)
+        return True
 
 
     def downloadBook(self, start, end):
@@ -110,12 +111,8 @@ class Book:
         # threads = []
 
         for link in search_bsObj.findAll("h3", {"class":"t"}):
-            '''
-            先获取百度搜索内容
-            然后爬取目录、进行所需筛选
-            如果还有未成功的，继续向后爬取
-            '''
-            if len(self.waiting_list) == 0:
+            failed_times = 0
+            if len(self.waiting_list) == 0: # Finished
                 break
             try:
                 html = requests.get(link.a['href'], verify = False)
@@ -129,17 +126,21 @@ class Book:
             for target in self.waiting_list:
                 Chapter_inter_url = bsObj.find("a", string = self.chapter_name_list[target - 1])
                 if Chapter_inter_url == None:
+                    failed_times += 1
                     print (self.chapter_name_list[target - 1], "not found")
                     print (html.url)
+                    if failed_times >= 10:
+                        break
                     continue
-                print ('\n'*10)
+                print ('\n'*2)
                 print ("target = %d" % target)
                 print ("Before Join ", html.url, Chapter_inter_url['href'])
                 site = urljoin(html.url, Chapter_inter_url['href'])
                 print ("After :", site)
                 # threading.Thread(target = self.parseWebSite, \
                 #                 args = (site, target ,)).start()
-                self.parseWebSite(site, target)
+                if self.parseWebSite(site, target) == False:
+                    break
 
             for trash_num in self.trash_list:
                 self.waiting_list.remove(trash_num)
@@ -167,19 +168,6 @@ def BaiduSearch(content):
     print (BaiduUrl + repr(content)[1:-1])
     html.encoding = 'utf-8'
     return html
-
-def strB2Q(ustring):
-    """半角转全角"""
-    rstring = ""
-    for uchar in ustring:
-        inside_code=ord(uchar)
-        if inside_code == 32:                                 #半角空格直接转化
-            inside_code = 12288
-        elif inside_code >= 32 and inside_code <= 126:        #半角字符（除空格）根据关系转化
-            inside_code += 65248
-
-        rstring += unichr(inside_code)
-    return rstring
 
 def QidianSearch(book_name):
     book_name = quote(book_name.strip().encode('utf-8'))
